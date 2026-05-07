@@ -31,22 +31,61 @@ baseball_data %>%
   # Beobachtung: HR sieht linearer aus als BB. 
   # Grund: HR garantiert Punkte, BB ist nur eine Chance auf Punkte.
   # Aber: BB ist trotzdem ein starker Prädiktor!
-  --------------------------------------------------------------------
+--------------------------------------------------------------------
   # Vergleich: Wie sieht es mit den Stolen Bases (SB) aus?
   
   baseball_data %>% 
-  
-  ggplot(aes(x = SB / G, y = R_per_game)) +
-  
-  geom_point(alpha = 0.5) +
-  
-  labs(title = "Stolen Bases vs. Runs pro Spiel",
-       
+    ggplot(aes(x = SB / G, y = R_per_game)) +
+    geom_point(alpha = 0.5) +
+    labs(title = "Stolen Bases vs. Runs pro Spiel",
        x = "Stolen Basis (SB) pro Spiel",
-       
        y = "Erzielte Runs pro Spiel")
 
 # Fazit der Analyse:
 # Während HR und BB eine klare positive Richtung (Korrelation) zeigen, 
 # ist die Punktwolke bei den Stolen Bases (SB) viel diffuser.
 # Das bestätigt die Theorie: SB sind ein schlechterer Prädiktor für Runs als BB.(historisch überbewertet)
+----------------------------------------------------
+#Quiz: ----
+#Question: What does the Variable "SOA" stand for in the Teams Table? ------
+# strikeouts by pitchers
+?Teams
+
+#Make a scatterplot of runs per game versus at bats (AB) per game.-------
+baseball_data %>% 
+  ggplot(aes(x = AB / G, y = R_per_game)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "At Bats vs. Runs pro Spiel",
+       x = "At Bats (AB) pro Spiel",
+       y = "Erzielte Runs pro Spiel")
+# Ergebnis & Interpretation (At Bats vs. Runs):
+# Es gibt eine positive Korrelation, aber sie ist weniger präzise als bei HR.
+# Mehr At Bats bedeuten mehr Chancen auf Runs, aber die Effizienz 
+# (wie viele ABs tatsächlich zu Runs führen) variiert stark zwischen den Teams.
+# Allein durch mehr At Bats gewinnt man keine Spiele – man muss sie nutzen.
+
+#Use the filtered Teams data frame from Question 6. Make a scatterplot of win rate (number of wins per game) versus number of fielding errors (E) per game.----
+baseball_data %>% 
+  ggplot(aes(x = E / G, y = W / G)) + 
+  geom_point(alpha = 0.5) +
+  labs(title = "Einfluss von Fehlern auf die Gewinnrate",
+       x = "Errors (Fehler) pro Spiel",
+       y = "Gewinnrate (W/G)")
+# Ergebnis & Interpretation (Errors vs. Wins):
+# Es zeigt sich eine schwache negative Korrelation. 
+# Zwar sind Fehler (Errors) schlecht für das Spiel, aber sie sind 
+# kein dominanter Prädiktor für den Gesamterfolg einer Saison.
+# Das erklärt, warum Bill James (Sabermetrics) argumentierte, dass 
+# klassische Fielding-Statistiken oft überbewertet werden.
+
+#Use the filtered Teams data frame from Question 6. Make a scatterplot of triples (X3B) per game versus doubles (X2B) per game.-----
+baseball_data %>% 
+  ggplot(aes(x = X2B / G, y = X3B / G)) + 
+  geom_point(alpha = 0.5) +
+  labs(title = "Beziehung zwischen doubles und Tripples",
+       x = "Doubles pro Spiel",
+       y = "Tripples pro Spiel")
+# Ergebnis & Interpretation:
+# Die Korrelation ist hier sehr schwach/nicht vorhanden. 
+# Das bedeutet: Ein Team, das viele Doubles schlägt, schlägt 
+# nicht automatisch auch viele Triples. Unterschiedliche Skills!
