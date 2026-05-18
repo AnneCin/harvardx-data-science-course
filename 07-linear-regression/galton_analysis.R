@@ -53,10 +53,11 @@ galton_heights %>%
 
 
 # 4. KORRELATION ALS ZUFALLSVARIABLE (Monte Carlo) --------------
-# Die Korrelation einer Stichprobe ist eine Schätzung für die Population [cite: 3, 4]
+# Die Korrelation einer Stichprobe ist eine Schätzung für die Population 
 
-B <- 1000  # Anzahl der Simulationen [cite: 9]
-N <- 25    # Kleine Stichprobengröße [cite: 10]
+B <- 1000  # Anzahl der Simulationen 
+N <- 25    # Kleine Stichprobengröße 
+set.seed(1983)  # Reproduzierbarkeit der Monte Carlo Simulation
 
 R <- replicate(B, {
   slice_sample(galton_heights, n = N, replace = TRUE) %>% 
@@ -65,7 +66,7 @@ R <- replicate(B, {
 })
 
 # Histogramm der Ergebnisse
-# Zeigt, dass r bei kleinen Stichproben stark schwanken kann (hoher Standardfehler) [cite: 10, 11]
+# Zeigt, dass r bei kleinen Stichproben stark schwanken kann (hoher Standardfehler) 
 data.frame(R) %>% 
   ggplot(aes(R)) + 
   geom_histogram(binwidth = 0.05, color = "black", fill = "steelblue") +
@@ -73,12 +74,17 @@ data.frame(R) %>%
        x = "Berechnete Korrelation (r)")
 
 # Statistischer Check der Simulation
-mean(R)  # Sollte nah an der echten Korrelation liegen (~0.5) [cite: 10]
-sd(R)    # Der Standardfehler der Korrelation (relativ hoch bei kleinem N) [cite: 10]
+mean(R)  # Sollte nah an der echten Korrelation liegen (~0.5) 
+sd(R)    # Der Standardfehler der Korrelation (relativ hoch bei kleinem N) 
 
 # QQ-Plot zur Prüfung auf Normalverteilung (Zentraler Grenzwertsatz)
-# Bei N=25 ist die Verteilung oft noch nicht perfekt normal [cite: 13, 15]
+# Bei N=25 ist die Verteilung oft noch nicht perfekt normal 
+# intercept =mean(R) - bedeutet, dass die Gerade durch den Punkt geht wo die theoretische Normalverteilung ihren Mittelpunkt hat (mean(R)= ca. 0.5)
+# slope ist die theoretische Standardabweichung von R(wie ist die steigung der geraden wenn R perfekt normalverteilt wäre)
 data.frame(R) %>%
   ggplot(aes(sample = R)) +
   stat_qq() +
-  geom_abline(intercept = mean(R), slope = sqrt((1-mean(R)^2)/(N-2)))
+  geom_abline(intercept = mean(R), slope = sqrt((1-mean(R)^2)/(N-2)))+
+  labs(title = "Normalverteilung, Abweichung", 
+     x = "Theoretische Normalquantile", 
+     y = "Sample-Korrelation R")
