@@ -4,7 +4,7 @@
 library(Lahman)
 library(tidyverse)
 
-# Daten vorbereiten: Zeitraum 1961 bis 2001 [cite: 1, 4]
+# Daten vorbereiten: Zeitraum 1961 bis 2001 
 # Ich berechne Werte pro Spiel (G), um Teams vergleichbar zu machen
 baseball_data <- Teams %>% 
   filter(yearID %in% 1961:2001) %>% 
@@ -18,7 +18,7 @@ ggplot(baseball_data, aes(x = HR_per_game, y = R_per_game)) +
        subtitle = "Daten von 1961 bis 2001",
        x = "Home Runs pro Spiel",
        y = "Erzielte Runs pro Spiel")
---------------------------------------------------------------------
+#--------------------------------------------------------------------
 
 # Vergleich: Wie sieht es mit den Walks (BB) aus?
 baseball_data %>% 
@@ -27,11 +27,11 @@ baseball_data %>%
   labs(title = "Bases on Balls vs. Runs pro Spiel",
        x = "Walks (BB) pro Spiel",
        y = "Erzielte Runs pro Spiel")
-----------------------------------------------------------------------
+#----------------------------------------------------------------------
   # Beobachtung: HR sieht linearer aus als BB. 
   # Grund: HR garantiert Punkte, BB ist nur eine Chance auf Punkte.
   # Aber: BB ist trotzdem ein starker Prädiktor!
---------------------------------------------------------------------
+#--------------------------------------------------------------------
   # Vergleich: Wie sieht es mit den Stolen Bases (SB) aus?
   
   baseball_data %>% 
@@ -45,7 +45,7 @@ baseball_data %>%
 # Während HR und BB eine klare positive Richtung (Korrelation) zeigen, 
 # ist die Punktwolke bei den Stolen Bases (SB) viel diffuser.
 # Das bestätigt die Theorie: SB sind ein schlechterer Prädiktor für Runs als BB.(historisch überbewertet)
-----------------------------------------------------
+#----------------------------------------------------
 #Quiz: ----
 #Question: What does the Variable "SOA" stand for in the Teams Table? ------
 # strikeouts by pitchers
@@ -58,6 +58,7 @@ baseball_data %>%
   labs(title = "At Bats vs. Runs pro Spiel",
        x = "At Bats (AB) pro Spiel",
        y = "Erzielte Runs pro Spiel")
+
 # Ergebnis & Interpretation (At Bats vs. Runs):
 # Es gibt eine positive Korrelation, aber sie ist weniger präzise als bei HR.
 # Mehr At Bats bedeuten mehr Chancen auf Runs, aber die Effizienz 
@@ -89,3 +90,12 @@ baseball_data %>%
 # Die Korrelation ist hier sehr schwach/nicht vorhanden. 
 # Das bedeutet: Ein Team, das viele Doubles schlägt, schlägt 
 # nicht automatisch auch viele Triples. Unterschiedliche Skills!
+
+# (Q7) - What is the correlation coefficient between number of runs per game and number of at bats per game?
+cor_AB_R <- baseball_data %>% mutate(AB_per_game = AB / G) %>% summarise(cor(AB_per_game, R_per_game))
+
+# (Q8) - What is the correlation coefficient between win rate (number of wins per game) and number of errors per game?
+cor_WR_E <- baseball_data %>% mutate(WinRate = W/G, Errors_per_game = E/G) %>% summarise (cor(WinRate, Errors_per_game))
+
+# (Q9)S - What is the correlation coefficient between doubles (X2B) per game and triples (X3B) per game?
+cor_X2B_X3B <- baseball_data %>% mutate(doubles =X2B/G, tripples = X3B/G) %>% summarise (cor(doubles, tripples))
