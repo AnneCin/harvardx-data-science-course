@@ -88,3 +88,27 @@ data.frame(R) %>%
   labs(title = "Normalverteilung, Abweichung", 
      x = "Theoretische Normalquantile", 
      y = "Sample-Korrelation R")
+
+# 5. STRATIFIKATION ---------------------------------------------
+
+# number of fathers with height 72 or 72.5 inches
+sum(galton_heights$father == 72)
+sum(galton_heights$father == 72.5)
+
+#zu wenige Väter sind genau 72 oder 72,5inches groß
+#runde auf und berechne für gruppen
+# Boxplot der stratifizierten Gruppen
+
+galton_heights %>%
+  mutate(father_strata = factor(round(father))) %>%
+  ggplot(aes(father_strata, son)) +
+  geom_boxplot()
+
+r <- galton_heights %>% summarize(r = cor(father, son)) %>% pull(r)
+
+galton_heights %>%
+  mutate(father_std = (father - mean(father)) / sd(father),
+         son_std = (son - mean(son)) / sd(son)) %>%
+  ggplot(aes(father_std, son_std)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(intercept = 0, slope = r)
