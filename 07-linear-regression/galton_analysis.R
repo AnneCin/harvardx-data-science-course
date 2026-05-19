@@ -164,3 +164,17 @@ galton_heights %>%
   labs(title = "Father-son height: regression line in standard units", 
        x = "Father height (standard units)", 
        y = "Son height (standard units)")
+
+# 6. BIVARIATE NORMAL DISTRIBUTION ----------------------------
+
+galton_heights %>%
+  mutate(z_father = round((father - mean(father))/sd(father))) %>%
+  filter(z_father %in% -2:2) %>%
+  ggplot() +  
+  stat_qq(aes(sample=son)) +
+  facet_wrap(~z_father)+
+  labs(title = "Distribution in every Father Group", 
+                             x = "Theoretical quantiles", 
+                             y = "Son height")
+# The son heights are normally distributed in every father group.
+# This confirms the bivariate normal distribution assumption for our Galton data.
