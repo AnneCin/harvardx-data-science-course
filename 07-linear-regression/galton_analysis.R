@@ -5,15 +5,14 @@
 library(tidyverse)
 library(HistData)
 
-# 1. DATENVORBEREITUNG ------------------------------------------
+# 1. DATA PREPARATION ------------------------------------------
 
 data("GaltonFamilies")
 
-# Wir ziehen pro Familie zufällig einen Sohn, um Unabhängigkeit zu garantieren
+# Select one son per family to ensure independence
 set.seed(1983) 
-# Fixiert den Zufallsgenerator, damit die Stichprobe 
-# (sample_n) immer identisch bleibt. Wichtig für die 
-# Reproduzierbarkeit der Ergebnisse!
+# Fixes the random generator so that the sample is always identical.
+# Important for reproducibility!
 
 galton_heights <- GaltonFamilies %>%
   filter(gender == "male") %>%
@@ -24,40 +23,40 @@ galton_heights <- GaltonFamilies %>%
   rename(son = childHeight)
 
 
-# 2. EXPLORATIVE ANALYSE (Lagemasse) ----------------------------
+# 2. EXPLORATORY ANALYSIS --------------------------------------
 
-# Mittelwert und Standardabweichung (SD)
-# SD ist das Maß für die Streuung um den Mittelwert (Einheit: Zoll)
+# Mean and standard deviation (SD)
+# SD measures the spread around the mean (unit: inches)
 galton_heights %>%
   summarize(mean(father), sd(father), mean(son), sd(son))
 
 
-# 3. KORRELATION (r) --------------------------------------------
+# 3. CORRELATION (r) -------------------------------------------
 
-# r beschreibt Richtung und Stärke des linearen Zusammenhangs (-1 bis 1)
+# r describes direction and strength of the linear relationship (-1 to 1)
 galton_heights %>% 
   summarize(r = cor(father, son))
-# WICHTIGE MERKREGEL:
-# r > 0 (Positiv): 'Je mehr x, desto mehr y' (Beispiel: Vater-Sohn Größe)
-# r < 0 (Negativ): 'Je mehr x, desto weniger y' (Beispiel: Errors vs. Wins)
-# r = 0 (Null): Kein linearer Trend erkennbar.
+# KEY RULE:
+# r > 0 (positive): 'the more x, the more y' (example: father-son height)
+# r < 0 (negative): 'the more x, the less y' (example: errors vs. wins)
+# r = 0 (zero): no linear trend detectable
 
-# Visualisierung mit Regressionsgerade (blau) und Identitätslinie (rot)
+# Visualization with regression line (blue) and identity line (red)
 galton_heights %>%
   ggplot(aes(father, son)) +
   geom_point(alpha = 0.5) +
   geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") + 
   geom_smooth(method = "lm", color = "blue") +
-  labs(title = "Regression zur Mitte",
-       subtitle = "Blau: Regressionsgerade | Rot: 1-zu-1 Erbe-Linie")
+  labs(title = "Regression to the mean",
+       subtitle = "Blue: regression line | Red: 1-to-1 inheritance line")
 
 
-# 4. KORRELATION ALS ZUFALLSVARIABLE (Monte Carlo) --------------
-# Die Korrelation einer Stichprobe ist eine Schätzung für die Population 
+# 4. CORRELATION AS A RANDOM VARIABLE (Monte Carlo) ------------
+# The correlation of a sample is an estimate for the population
 
-B <- 1000  # Anzahl der Simulationen 
-N <- 25    # Kleine Stichprobengröße 
-set.seed(1983)  # Reproduzierbarkeit der Monte Carlo Simulation
+B <- 1000  # number of simulations
+N <- 25    # small sample size
+set.seed(1983)  # reproducibility of the Monte Carlo simulation
 
 R <- replicate(B, {
   slice_sample(galton_heights, n = N, replace = TRUE) %>% 
@@ -65,50 +64,103 @@ R <- replicate(B, {
     pull(r)
 })
 
-# Histogramm der Ergebnisse
-# Zeigt, dass r bei kleinen Stichproben stark schwanken kann (hoher Standardfehler) 
+# Histogram of results
+# Shows that r can vary a lot with small samples (high standard error)
 data.frame(R) %>% 
   ggplot(aes(R)) + 
   geom_histogram(binwidth = 0.05, color = "black", fill = "steelblue") +
-  labs(title = "Verteilung der Stichproben-Korrelation (N=25)",
-       x = "Berechnete Korrelation (r)")
+  labs(title = "Distribution of sample correlation (N=25)",
+       x = "Calculated correlation (r)")
 
-# Statistischer Check der Simulation
-mean(R)  # Sollte nah an der echten Korrelation liegen (~0.5) 
-sd(R)    # Der Standardfehler der Korrelation (relativ hoch bei kleinem N) 
+# Statistical check of the simulation
+mean(R)  # should be close to the true correlation (~0.5)
+sd(R)    # standard error of the correlation (relatively high for small N)
 
-# QQ-Plot zur Prüfung auf Normalverteilung (Zentraler Grenzwertsatz)
-# Bei N=25 ist die Verteilung oft noch nicht perfekt normal 
-# intercept =mean(R) - bedeutet, dass die Gerade durch den Punkt geht wo die theoretische Normalverteilung ihren Mittelpunkt hat (mean(R)= ca. 0.5)
-# slope ist die theoretische Standardabweichung von R(wie ist die steigung der geraden wenn R perfekt normalverteilt wäre)
+# QQ-plot to check for normality (central limit theorem)
+# At N=25 the distribution is often not yet perfectly normal
+# intercept = mean(R): the line passes through the center of the theoretical normal distribution
+# slope: theoretical standard deviation of R (steepness if R were perfectly normally distributed)
 data.frame(R) %>%
   ggplot(aes(sample = R)) +
   stat_qq() +
-  geom_abline(intercept = mean(R), slope = sqrt((1-mean(R)^2)/(N-2)))+
-  labs(title = "Normalverteilung, Abweichung", 
-     x = "Theoretische Normalquantile", 
-     y = "Sample-Korrelation R")
+  geom_abline(intercept = mean(R), slope = sqrt((1-mean(R)^2)/(N-2))) +
+  labs(title = "QQ-plot: normality check of sample correlation", 
+       x = "Theoretical normal quantiles", 
+       y = "Sample correlation R")
 
-# 5. STRATIFIKATION ---------------------------------------------
 
-# number of fathers with height 72 or 72.5 inches
+# 5. STRATIFICATION --------------------------------------------
+
+# Number of fathers with height exactly 72 or 72.5 inches
 sum(galton_heights$father == 72)
 sum(galton_heights$father == 72.5)
+# Too few fathers are exactly 72 or 72.5 inches tall
+# -> standard error too large, not useful for prediction
 
-#zu wenige Väter sind genau 72 oder 72,5inches groß
-#runde auf und berechne für gruppen
-# Boxplot der stratifizierten Gruppen
+# Predicted height of a son with a 72 inch tall father
+conditional_avg <- galton_heights %>%
+  filter(round(father) == 72) %>%
+  summarize(avg = mean(son)) %>%
+  pull(avg)
+conditional_avg
 
-galton_heights %>%
+# Stratify fathers' heights to make a boxplot of son heights
+# Rounding creates groups with enough observations per stratum
+galton_heights %>% 
   mutate(father_strata = factor(round(father))) %>%
   ggplot(aes(father_strata, son)) +
-  geom_boxplot()
+  geom_boxplot() +
+  geom_point()
 
-r <- galton_heights %>% summarize(r = cor(father, son)) %>% pull(r)
-
+# Center of each boxplot (conditional average per stratum)
 galton_heights %>%
-  mutate(father_std = (father - mean(father)) / sd(father),
-         son_std = (son - mean(son)) / sd(son)) %>%
-  ggplot(aes(father_std, son_std)) +
-  geom_point(alpha = 0.5) +
+  mutate(father = round(father)) %>%
+  group_by(father) %>%
+  summarize(son_conditional_avg = mean(son)) %>%
+  ggplot(aes(father, son_conditional_avg)) +
+  geom_point()
+
+# Regression line on standardized data
+# In standard units: intercept = 0, slope = r (rho)
+r <- galton_heights %>% summarize(r = cor(father, son)) %>% pull(r)
+r
+
+galton_heights %>% 
+  mutate(father = scale(father), son = scale(son)) %>%
+  mutate(father = round(father)) %>%
+  group_by(father) %>%
+  summarize(son = mean(son)) %>%
+  ggplot(aes(father, son)) + 
+  geom_point() +
   geom_abline(intercept = 0, slope = r)
+
+# Regression line on original data (in inches)
+# mu = mean, s = standard deviation
+mu_x <- mean(galton_heights$father)  # mean father height
+mu_y <- mean(galton_heights$son)     # mean son height
+s_x <- sd(galton_heights$father)     # SD father height
+s_y <- sd(galton_heights$son)        # SD son height
+
+# Correlation coefficient (rho) between fathers and sons
+r <- cor(galton_heights$father, galton_heights$son)
+# Slope of regression line in original units (accounts for regression to the mean)
+m <- r * s_y / s_x
+# Intercept of the regression line
+b <- mu_y - m * mu_x
+
+galton_heights %>% 
+  ggplot(aes(father, son)) + 
+  geom_point(alpha = 0.5) +
+  geom_abline(intercept = b, slope = m) +
+  labs(title = "Father-son height: regression line in original units", 
+       x = "Father height (inches)", 
+       y = "Son height (inches)")
+
+# Regression line in standard units: intercept = 0, slope = rho
+galton_heights %>% 
+  ggplot(aes(scale(father), scale(son))) + 
+  geom_point(alpha = 0.5) +
+  geom_abline(intercept = 0, slope = r) +
+  labs(title = "Father-son height: regression line in standard units", 
+       x = "Father height (standard units)", 
+       y = "Son height (standard units)")
