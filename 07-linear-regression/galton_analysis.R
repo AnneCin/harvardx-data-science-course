@@ -201,11 +201,6 @@ slope_b     <- coef(fit_father_from_son)[2]
 m_father_from_son <- r * s_x / s_y
 b_father_from_son <- mu_x - m_father_from_son * mu_y
 
-slope_b
-m_father_from_son
-
-intercept_b
-b_father_from_son
 
 # 3. Visualize the two distinct regression lines
 
@@ -235,3 +230,68 @@ ggplot(galton_heights, aes(x = father, y = son)) +
     y = "Son's Height"
   ) +
   theme_minimal()
+
+# 8. CASE STUDY: MOTHER & DAUGHTER HEIGHTS (FEMALES) ----------------
+
+data("GaltonFamilies")
+# Set the seed with the "Rounding" sampler to match the HarvardX environment
+# Note: This must be executed right before sampling to ensure exact reproducibility!
+set.seed(1989, sample.kind = "Rounding")
+
+# # Create the female heights dataset by filtering and selecting one daughter per family
+female_heights <- GaltonFamilies %>%     
+  filter(gender == "female") %>%     
+  group_by(family) %>%     
+  sample_n(1) %>%     
+  ungroup() %>%     
+  select(mother, childHeight) %>%     
+  rename(daughter = childHeight)
+
+# Calculate and print means
+mean_mother   <- mean(female_heights$mother)
+mean_daughter <- mean(female_heights$daughter)
+
+# Calculate and print standard deviations
+sd_mother     <- sd(female_heights$mother)
+sd_daughter   <- sd(female_heights$daughter)
+
+# Calculate and print correlation coefficient
+r_female      <- cor(female_heights$mother, female_heights$daughter)
+
+# Display all values in the console
+mean_mother
+mean_daughter
+sd_mother
+sd_daughter
+r_female
+
+#calculate the slope of regression predicting daughters hights from mothers hights
+# Formula: m = r * (sd_y / sd_x)
+m_female <- female_heights %>% 
+  summarize(m = cor(mother, daughter) * (sd(daughter) / sd(mother))) %>% 
+  pull(m)
+m_female
+#calculate intercept of regression line predicting daughters hights from mothers heights
+# Formula: b = mean_y - m * mean_x
+b_female <- female_heights %>%
+  summarise(b=mean(daughter)  - m_female*mean(mother)) %>%
+  pull(b)
+b_female
+
+#calculate change in daughters height in inches given a 1inch increase in the mothers heigh
+#Note: This is exactly the definition of the slope (m_female)!
+change_per_inch <- m_female
+change_per_inch
+
+#calculate the percentage of the variability in daughters heights - explained by the mothers heights
+# Note: The explained variance (R-squared) in a simple linear regression is exactly r^2.
+# We multiply by 100 to get the percentage.
+r_squared_percent <- (r_female^2) * 100
+r_squared_percent
+
+#A mother has a height of 60 inches.
+#Using the regression formula, what is the conditional expected value of her daughter's height given the mother's height?
+# Formula: expected_y = b + m * x
+mother_height_input <- 60
+expected_daughter_height <- b_female + m_female * mother_height_input
+expected_daughter_height
