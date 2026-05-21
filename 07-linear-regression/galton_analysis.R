@@ -4,6 +4,7 @@
 
 library(tidyverse)
 library(HistData)
+library(ggplot2)
 
 # 1. DATA PREPARATION ------------------------------------------
 
@@ -178,3 +179,49 @@ galton_heights %>%
                              y = "Son height")
 # The son heights are normally distributed in every father group.
 # This confirms the bivariate normal distribution assumption for our Galton data.
+
+# 7. Section 8: Warning - there are two regression lines ----------------------------
+
+#
+# 1. Fit both linear models
+# Model A: Predicting son's height from father's height (Vertical errors)
+fit_son_from_father <- lm(son ~ father, data = galton_heights)
+
+# Model B: Predicting father's height from son's height (Horizontal errors)
+fit_father_from_son <- lm(father ~ son, data = galton_heights)
+
+# 2. Extract coefficients for plotting Model B correctly on the same axes
+# Model B is: father = intercept + slope * son
+# Rearranged for the plot axes: son = (-intercept / slope) + (1 / slope) * father
+intercept_b <- coef(fit_father_from_son)[1]
+slope_b     <- coef(fit_father_from_son)[2]
+
+
+# 3. Visualize the two distinct regression lines
+
+# KEY LESSON:
+# Why are there two regression lines?
+# 1. 'lm(son ~ father)' minimizes VERTICAL errors (deviations in son's height).
+# 2. 'lm(father ~ son)' minimizes HORIZONTAL errors (deviations in father's height).
+# Because correlation (r) is imperfect (r < 1), these two optimization goals 
+# result in different slopes. They only intersect at the mean coordinates (X_bar, Y_bar).
+# This demonstrates 'Regression to the Mean': extraordinary fathers tend to 
+# have more average sons, and vice versa.
+
+ggplot(galton_heights, aes(x = father, y = son)) +
+  geom_point(alpha = 0.3, color = "darkgray") +
+  # Line 1: lm(son ~ father) - standard vertical minimization
+  geom_smooth(method = "lm", se = FALSE, color = "blue", linetype = "solid") +
+  # Line 2: lm(father ~ son) - rearranged for horizontal minimization
+  geom_abline(intercept = -intercept_b / slope_b, 
+              slope = 1 / slope_b, 
+              color = "red", linetype = "dashed") +
+  # Reference point: The intersection at the means (X_bar, Y_bar)
+  geom_point(x = mean(galton_heights$father), y = mean(galton_heights$son), color = "black", size = 4, shape = 18)+
+  labs(
+    title = "The Two Regression Lines in Galton's Data",
+    subtitle = "Blue: son ~ father (vertical) | Red: father ~ son (horizontal)",
+    x = "Father's Height",
+    y = "Son's Height"
+  ) +
+  theme_minimal()
