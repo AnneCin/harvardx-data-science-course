@@ -196,6 +196,16 @@ fit_father_from_son <- lm(father ~ son, data = galton_heights)
 intercept_b <- coef(fit_father_from_son)[1]
 slope_b     <- coef(fit_father_from_son)[2]
 
+# 2b. Course approach: Calculate the second line manually using formula
+# Formula from course: predicting father's height (X) from son's height (Y)
+m_father_from_son <- r * s_x / s_y
+b_father_from_son <- mu_x - m_father_from_son * mu_y
+
+slope_b
+m_father_from_son
+
+intercept_b
+b_father_from_son
 
 # 3. Visualize the two distinct regression lines
 
