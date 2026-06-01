@@ -89,3 +89,31 @@ lse_centered <- replicate(B, {
     .$coef 
 })
 cor(lse_centered[1,], lse_centered[2,])
+
+# 5. PREDICTED VALUES AS RANDOM VARIABLES ---------------------------
+
+# 1. Fit the linear model using the full dataset 
+# Predicting son's height based on father's height 
+fit_son <- lm(son ~ father, data = galton_heights)
+
+# 2. Extract predictions (y-hat) and standard errors 
+# The predict() function returns these statistical values 
+predictions <- predict(fit_son, se.fit = TRUE) 
+
+# Quick check of the generated random variable components 
+head(predictions$fit)     # The predicted values (y-hat) 
+head(predictions$se.fit)  # The standard errors of the predictions 
+
+# 3. Visualization of predictions with their confidence intervals 
+# geom_smooth automatically plots the confidence intervals (shaded band) around y-hat 
+galton_heights %>%
+  ggplot(aes(father, son)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", color = "blue", fill = "lightgray") +  # Standard linear model smooth 
+  labs(
+    title = "Predictions and Confidence Intervals",
+    subtitle = "The shaded band represents the uncertainty (Standard Errors) of Y-hat",
+    x = "Father's Height (inches)",
+    y = "Son's Height (inches)"
+  ) +
+  theme_minimal()
