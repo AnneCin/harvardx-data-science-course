@@ -48,9 +48,47 @@ results %>%
 #Solution? lm function -->
 
 # fit regression line to predict son's height from father's height
+
+#When calling the lm() function, the variable that we want to predict is put to the left of the ~ symbol, 
+#and the variables that we use to predict is put to the right of the ~ symbol. 
+#The intercept is added automatically.'
+
 fit <- lm(son ~ father, data = galton_heights)
 fit
 
 # summary statistics
 summary(fit)
+
+#Add Monte Carlo simulation for LSE as random variables------
+
+B<-1000
+N<-50
+# .$coef extracts only the coefficients table from the summary output
+# (Estimate, Std. Error, t value, p-value)
+lse <- replicate(B, {
+  sample_n(galton_heights, N, replace = TRUE) %>% 
+    lm(son ~ father, data = .) %>% 
+    .$coef
+})
+
+# Convert matrix output to a tidy data frame with named columns for beta_0 and beta_1
+lse <- data.frame(beta_0 = lse[1,], beta_1 = lse[2,]) 
+
+# Plot the distribution of beta_0 and beta_1
+library(gridExtra)
+p1 <- lse %>% ggplot(aes(beta_0)) + geom_histogram(binwidth = 5, color = "black") 
+p2 <- lse %>% ggplot(aes(beta_1)) + geom_histogram(binwidth = 0.1, color = "black") 
+grid.arrange(p1, p2, ncol = 2)
+
+# summary statistics
+sample_n(galton_heights, N, replace = TRUE) %>% 
+  lm(son ~ father, data = .) %>% 
+  summary %>%
+  .$coef
+
+# Compare: standard error from a single sample (lm summary) vs. 
+# standard error estimated from 1000 Monte Carlo simulations (sd of beta_0 and beta_1)
+# Both should be similar - confirms that lm() accurately estimates the standard error
+
+lse %>% summarize(se_0 = sd(beta_0), se_1 = sd(beta_1))
 
