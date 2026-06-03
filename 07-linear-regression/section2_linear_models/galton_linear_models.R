@@ -196,3 +196,59 @@ predicted_mother_heights <- predict(fit_female)
 print(predicted_mother_heights[1])
 # 3. Extract the actual (true) height of the first mother in the dataset
 print(female_heights$mother[1])
+
+#Assessment: Advanced dplyr, part 2----------
+#We have investigated the relationship between fathers' heights and sons' heights. 
+#But what about other parent-child relationships? 
+#Does one parent's height have a stronger association with child height? 
+#How does the child's gender affect this relationship in heights? 
+#Are any differences that we observe statistically significant?
+  
+#The galton dataset is a sample of one male and one female child from each family in the GaltonFamilies dataset. 
+#The pair column denotes whether the pair is father and daughter, father and son, mother and daughter, or mother and son.
+
+# set.seed(1) # if you are using R 3.5 or earlier
+set.seed(1, sample.kind = "Rounding") # if you are using R 3.6 or later
+galton <- GaltonFamilies %>%
+  group_by(family, gender) %>%
+  sample_n(1) %>%
+  ungroup() %>% 
+  gather(parent, parentHeight, father:mother) %>%
+  mutate(child = ifelse(gender == "female", "daughter", "son")) %>%
+  unite(pair, c("parent", "child"))
+
+galton
+
+#Q8 Group by pair and summarize the number of observations in each group.
+#How many father-daughter pairs are in the dataset?
+#How many mother-son pairs are in the dataset?
+pair_counts <- galton %>%
+  group_by(pair) %>%
+  summarize(count = n())
+
+#Q9 Calculate the correlation coefficients for fathers and daughters, fathers and sons, mothers and daughters and mothers and sons.
+#Which pair has the strongest correlation in heights?
+#Which pair has the weakest correlation in heights?
+
+# Group by the combined pair column and calculate the correlation 
+# between parentHeight and childHeight
+pair_correlations <- galton %>%
+  group_by(pair) %>%
+  summarize(correlation = cor(parentHeight, childHeight))
+
+# Print the sorted results to easily identify the strongest and weakest correlation
+pair_correlations %>% arrange(desc(correlation))
+
+#Q10a What is the estimate of the father-daughter coefficient?
+#For every 1-inch increase in mother's height, how many inches does the typical son's height increase?
+
+#Linear regression coefficients for each parent-child pair ---
+# Group by pair and use broom::tidy to run a regression model for each group
+  pair_regressions <- galton %>%
+  group_by(pair) %>%
+  summarize(broom::tidy(lm(childHeight ~ parentHeight, data = across()), conf.int = TRUE)) %>%
+  filter(term == "parentHeight") %>%
+  select(pair, estimate, std.error, conf.low, conf.high)
+
+# Print the table to the console
+print(pair_regressions)
