@@ -143,3 +143,102 @@ fit_bb <- lm(bb ~ mean_bb, data = bat_joined)
 coef(fit_bb)      # The second value (mean_bb) is the slope coefficient
 
 
+# ==============================================================================
+# SECTION 3: ADVANCED DPLYR - SUMMARIZE WITH FUNCTIONS AND BROOM
+# ==============================================================================
+
+# stratify by HR
+dat <- Teams %>% filter(yearID %in% 1961:2001) %>%
+  mutate(HR = round(HR/G, 1), 
+         BB = BB/G,
+         R = R/G) %>%
+  select(HR, BB, R) %>%
+  filter(HR >= 0.4 & HR<=1.2)
+
+# calculate slope of regression lines to predict runs by BB in different HR strata
+dat %>%  
+  group_by(HR) %>%
+  summarize(slope = cor(BB,R)*sd(R)/sd(BB))
+
+# use lm to get estimated slopes - lm does not work with grouped tibbles
+dat %>%  
+  group_by(HR) %>%
+  lm(R ~ BB, data = .) %>%
+  .$coef
+
+# include the lm inside a summarize and it will work
+dat %>%  
+  group_by(HR) %>%
+  summarize(slope = lm(R ~ BB)$coef[2])
+
+# tidy function from broom returns estimates in and information in a data frame
+library(broom)
+fit <- lm(R ~ BB, data = dat)
+tidy(fit)
+
+# add confidence intervals
+tidy(fit, conf.int = TRUE)
+
+# combine with group_by and summarize to get the table we want
+dat %>%  
+  group_by(HR) %>%
+  summarize(tidy(lm(R ~ BB), conf.int = TRUE))
+
+# it's a data frame so we can filter and select the rows and columns we want
+dat %>%  
+  group_by(HR) %>%
+  summarize(tidy(lm(R ~ BB), conf.int = TRUE)) %>%
+  filter(term == "BB") %>%
+  select(HR, estimate, conf.low, conf.high)
+
+# visualize the table with ggplot
+dat %>%  
+  group_by(HR) %>%
+  summarize(tidy(lm(R ~ BB), conf.int = TRUE)) %>%
+  filter(term == "BB") %>%
+  select(HR, estimate, conf.low, conf.high) %>%
+  ggplot(aes(HR, y = estimate, ymin = conf.low, ymax = conf.high)) +
+  geom_errorbar() +
+  geom_point()
+
+#Assessment: Advanced dplyr, part 1
+
+#Q5 You want to take the tibble dat, which we used in the video on the advanced dplyr, 
+#and run the linear model R ~ BB for each strata of HR. 
+#Then you want to add three new columns to your grouped tibble: 
+#the coefficient, standard error, and p-value for the BB term in the model.
+
+get_slope <- function(data) {
+  fit <- lm(R ~ BB, data = data)
+  sum.fit <- summary(fit)
+  
+  data.frame(slope = sum.fit$coefficients[2, "Estimate"], 
+             se = sum.fit$coefficients[2, "Std. Error"],
+             pvalue = sum.fit$coefficients[2, "Pr(>|t|)"])
+}
+
+dat <- Teams %>% filter(yearID %in% 1961:2001) %>%
+  mutate(HR = round(HR/G, 1), 
+         BB = BB/G,
+         R = R/G) %>%
+  select(HR, BB, R) %>%
+  filter(HR >= 0.4 & HR<=1.2)
+
+#This will create a tibble with four columns: HR, slope, se, and pvalue for each level of HR.
+dat %>% 
+  group_by(HR) %>% 
+  summarize(get_slope(across()))
+
+#Q7You want to know whether the relationship between home runs and runs per game varies by baseball league.
+
+dat <- Teams %>% filter(yearID %in% 1961:2001) %>%
+  mutate(HR = HR/G,
+         R = R/G) %>%
+  select(lgID, HR, BB, R)
+
+dat %>% 
+  group_by(lgID) %>% 
+  summarize(broom::tidy(lm(R ~ HR, data = across()), conf.int = TRUE)) %>% 
+  filter(term == "HR") 
+#Die Stärke des Effekts: In der American League bringt jeder Home Run pro Spiel dem Team im Schnitt 1,90 zusätzliche Runs. 
+#In der National League sind es 1,76 zusätzliche Runs.
