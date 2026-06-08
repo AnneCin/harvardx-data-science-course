@@ -237,6 +237,55 @@ players %>% filter(year(debut) < 1998) %>%
   ggplot(aes(salary, R_hat, color = POS)) + 
   geom_point() +
   scale_x_log10()
+
+
+# ==============================================================================
+# OPTIMIZATION: LINEAR PROGRAMMING FOR PLAYER SELECTION
+# ==============================================================================
+
+library(reshape2)
+library(lpSolve)
+
+# Filter for a specific generation of players
+players <- players %>% filter(debut <= "1997-01-01" & debut > "1988-01-01")
+
+# Create the constraint matrix for positions (Rows = Positions, Columns = Players)
+constraint_matrix <- acast(players, POS ~ playerID, fun.aggregate = length)
+npos <- nrow(constraint_matrix)
+
+# Add the salary row to the bottom of the matrix
+constraint_matrix <- rbind(constraint_matrix, salary = players$salary)
+
+# Define the direction of the constraints (== 1 for positions, <= 50M for salary)
+constraint_dir <- c(rep("==", npos), "<=")
+constraint_limit <- c(rep(1, npos), 50*10^6)
+
+# Run the linear programming algorithm to maximize R_hat
+lp_solution <- lp("max", players$R_hat,
+                  constraint_matrix, constraint_dir, constraint_limit,
+                  all.int = TRUE) 
+
+# Extract the chosen 9 players
+our_team <- players %>%
+  filter(lp_solution$solution == 1) %>%
+  arrange(desc(R_hat))
+
+# Display the optimized team
+our_team %>% select(nameFirst, nameLast, POS, salary, R_hat)
+
+# Scale the metrics to see WHY the algorithm chose them (using Median and MAD)
+my_scale <- function(x) (x - median(x))/mad(x)
+
+players %>% mutate(BB = my_scale(BB), 
+                   singles = my_scale(singles),
+                   doubles = my_scale(doubles),
+                   triples = my_scale(triples),
+                   HR = my_scale(HR),
+                   AVG = my_scale(AVG),
+                   R_hat = my_scale(R_hat)) %>%
+  filter(playerID %in% our_team$playerID) %>%
+  select(nameFirst, nameLast, BB, singles, doubles, triples, HR, AVG, R_hat) %>%
+  arrange(desc(R_hat))
 # ================================================================
 # EXERCISES & PRACTICE
 # ================================================================
