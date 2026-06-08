@@ -1,7 +1,9 @@
 library(tidyverse)
 library(HistData)
 library(ggplot2)
-
+# ================================================================
+# COURSE CONTENT
+# ================================================================
 # 1. DATA PREPARATION ------------------------------------------
 data("GaltonFamilies")
 # Select one son per family to ensure independence
@@ -127,9 +129,12 @@ galton_heights_with_pred %>%
   ) +
   theme_minimal()
 
-#Assesment: Least Squares Estimates, part 1----------'
+# ================================================================
+# EXERCISES & PRACTICE
+# ================================================================
+#Assessment: Least Squares Estimates, part 1----------'
 
-#Q1: Find beta1 that minimizes RSS when beta0 = 36
+#Find beta1 that minimizes RSS when beta0 = 36
 beta1_test <- seq(0, 1, len = nrow(galton_heights))
 
 results_test <- data.frame(
@@ -143,33 +148,17 @@ results_test <- data.frame(
 best_beta1 <- results_test$beta1[which.min(results_test$rss)]
 best_beta1
 
-#Q3 Load the Lahman library and filter the Teams data frame to the years 1961-2001. 
-#Mutate the dataset to create variables for 
-#bases on balls per game, runs per game, and home runs per game, 
-#then run a linear model in R predicting the number of runs per game 
-#based on both the number of bases on balls per game and the number of home runs per game.
 
-teams_filtered <- Teams %>% 
-  filter(yearID %in% 1961:2001) %>%
-  mutate(BB_per_game = BB / G,
-         R_per_game  = R / G,
-         HR_per_game = HR / G)
-
-fit_baseball_q3 <- lm(R_per_game ~ BB_per_game + HR_per_game, data = teams_filtered)
-summary(fit_baseball_q3)
-
-# Assessment Q5: Plot predictions and confidence intervals
-# Option 2: geom_smooth(method = "lm") automatically plots confidence intervals
+# Plot predictions and confidence intervals
 galton_heights %>% ggplot(aes(father, son)) +
   geom_point() +
   geom_smooth(method = "lm")
 
-#Assesment: Least Squares Estimates, part 2----------
-#In Questions 7 and 8, I'll look again at female heights from GaltonFamilies.
+#Assessment: Least Squares Estimates, part 2----------
 #Define female_heights, a set of mother and daughter heights sampled from GaltonFamilies, as follows:
 
-set.seed(1989) #if you are using R 3.5 or earlier
-set.seed(1989, sample.kind="Rounding") #if you are using R 3.6 or later
+set.seed(1989) 
+set.seed(1989, sample.kind="Rounding") 
 library(HistData)
 data("GaltonFamilies")
 options(digits = 3)    # report 3 significant digits
@@ -182,12 +171,12 @@ female_heights <- GaltonFamilies %>%
   select(mother, childHeight) %>%     
   rename(daughter = childHeight)
 
-#Q7Fit a linear regression model predicting the mothers' heights using daughters' heights.
-#What is the slope of the model? What the intercept of the model?
+# Fit a linear regression model predicting the mothers' heights using daughters' heights.
+# What is the slope of the model? What the intercept of the model?
 fit_female <- lm(mother ~ daughter, data = female_heights)
 summary(fit_female)
 
-#Q8Predict mothers' heights using the model from Question 7 and the predict() function.
+# Predict mothers' heights and the predict() function.
 # What is the predicted height of the first mother in the dataset? What is the actual height of the first mother in the dataset?
 
 # This calculates Y-hat (predicted values) for every daughter in the dataset
@@ -197,17 +186,17 @@ print(predicted_mother_heights[1])
 # 3. Extract the actual (true) height of the first mother in the dataset
 print(female_heights$mother[1])
 
-#Assessment: Advanced dplyr, part 2----------
-#We have investigated the relationship between fathers' heights and sons' heights. 
-#But what about other parent-child relationships? 
-#Does one parent's height have a stronger association with child height? 
-#How does the child's gender affect this relationship in heights? 
-#Are any differences that we observe statistically significant?
+# Assessment: Advanced dplyr, part 2----------
+# We have investigated the relationship between fathers' heights and sons' heights. 
+# But what about other parent-child relationships? 
+# Does one parent's height have a stronger association with child height? 
+# How does the child's gender affect this relationship in heights? 
+# Are any differences that we observe statistically significant?
   
-#The galton dataset is a sample of one male and one female child from each family in the GaltonFamilies dataset. 
-#The pair column denotes whether the pair is father and daughter, father and son, mother and daughter, or mother and son.
+# The galton dataset is a sample of one male and one female child from each family in the GaltonFamilies dataset. 
+# The pair column denotes whether the pair is father and daughter, father and son, mother and daughter, or mother and son.
 
-# set.seed(1) # if you are using R 3.5 or earlier
+# set.seed(1) 
 set.seed(1, sample.kind = "Rounding") # if you are using R 3.6 or later
 galton <- GaltonFamilies %>%
   group_by(family, gender) %>%
@@ -219,16 +208,16 @@ galton <- GaltonFamilies %>%
 
 galton
 
-#Q8 Group by pair and summarize the number of observations in each group.
-#How many father-daughter pairs are in the dataset?
-#How many mother-son pairs are in the dataset?
+# Group by pair and summarize the number of observations in each group.
+# How many father-daughter pairs are in the dataset?
+# How many mother-son pairs are in the dataset?
 pair_counts <- galton %>%
   group_by(pair) %>%
   summarize(count = n())
 
-#Q9 Calculate the correlation coefficients for fathers and daughters, fathers and sons, mothers and daughters and mothers and sons.
-#Which pair has the strongest correlation in heights?
-#Which pair has the weakest correlation in heights?
+# Calculate the correlation coefficients for fathers and daughters, fathers and sons, mothers and daughters and mothers and sons.
+# Which pair has the strongest correlation in heights?
+# Which pair has the weakest correlation in heights?
 
 # Group by the combined pair column and calculate the correlation 
 # between parentHeight and childHeight
@@ -239,10 +228,10 @@ pair_correlations <- galton %>%
 # Print the sorted results to easily identify the strongest and weakest correlation
 pair_correlations %>% arrange(desc(correlation))
 
-#Q10a What is the estimate of the father-daughter coefficient?
-#For every 1-inch increase in mother's height, how many inches does the typical son's height increase?
+# What is the estimate of the father-daughter coefficient?
+# For every 1-inch increase in mother's height, how many inches does the typical son's height increase?
 
-#Linear regression coefficients for each parent-child pair ---
+# Linear regression coefficients for each parent-child pair ---
 # Group by pair and use broom::tidy to run a regression model for each group
   pair_regressions <- galton %>%
   group_by(pair) %>%
