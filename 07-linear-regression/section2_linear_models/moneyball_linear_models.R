@@ -286,6 +286,82 @@ players %>% mutate(BB = my_scale(BB),
   filter(playerID %in% our_team$playerID) %>%
   select(nameFirst, nameLast, BB, singles, doubles, triples, HR, AVG, R_hat) %>%
   arrange(desc(R_hat))
+
+# ==============================================================================
+# SECTION 2.3: REGRESSION FALLACY & THE SOPHOMORE SLUMP
+# ==============================================================================
+
+# THEORETICAL BACKGROUND:
+# The "Sophomore Slump" describes the phenomenon where "Rookies of the Year" (ROY) 
+# often perform worse in their second (sophomore) season.
+# This is not a psychological issue, but pure mathematics: 
+# "Regression to the Mean". Players who start extremely high are statistically 
+# bound to move back closer to the average in their next season.
+
+# 1. Determine the primary position per player (the position with the most games played)
+playerInfo <- Fielding %>%
+  group_by(playerID) %>%
+  arrange(desc(G)) %>% # Sort games descending (highest number of games first)
+  slice(1) %>%         # Keep only the top row (primary position)
+  ungroup() %>%
+  left_join(People, by = "playerID") %>%
+  select(playerID, nameFirst, nameLast, POS)
+
+# 2. Isolate "Rookie of the Year" winners & attach all career batting statistics
+ROY <- AwardsPlayers %>%
+  filter(awardID == "Rookie of the Year") %>%
+  left_join(playerInfo, by = "playerID") %>%
+  rename(rookie_year = yearID) %>% # Save the award year as a fixed reference point
+  right_join(Batting, by = "playerID") %>% # Fetch complete career statistics
+  mutate(AVG = H/AB) %>%
+  filter(POS != "P") # Exclude pitchers to avoid skewing the batting statistics
+
+# 3. Keep only the rookie and sophomore seasons
+ROY <- ROY %>%
+  filter(yearID == rookie_year | yearID == rookie_year + 1) %>%
+  group_by(playerID) %>%
+  # Label the earlier year as "rookie" and the later year as "sophomore"
+  mutate(rookie = ifelse(yearID == min(yearID), "rookie", "sophomore")) %>%
+  filter(n() == 2) %>% # Keep only players who actually played both seasons
+  ungroup() %>%
+  select(playerID, rookie_year, rookie, nameFirst, nameLast, AVG)
+
+# 4. Reshape from long to wide format for mathematical comparison
+ROY_wide <- ROY %>% 
+  spread(rookie, AVG) %>% 
+  arrange(desc(rookie))
+
+# Calculation: What proportion of players performed worse in their sophomore year?
+# (Result: ~ 67.7% decline - a purely mathematical consequence!)
+mean(ROY_wide$sophomore - ROY_wide$rookie <= 0)
+
+
+# ------------------------------------------------------------------------------
+# CROSS-CHECK: What happens to the WORST performers?
+# ------------------------------------------------------------------------------
+# If the theory holds true, extremely poor performers should improve the following year.
+
+# Filter all players active in both 2013 & 2014 (minimum 130 At Bats)
+two_years <- Batting %>%
+  filter(yearID %in% 2013:2014) %>%
+  group_by(playerID, yearID) %>%
+  filter(sum(AB) >= 130) %>%
+  summarize(AVG = sum(H)/sum(AB)) %>%
+  ungroup() %>%
+  spread(yearID, AVG) %>%
+  filter(!is.na(`2013`) & !is.na(`2014`)) %>%
+  left_join(playerInfo, by = "playerID") %>%
+  filter(POS != "P") %>%
+  select(-POS)
+
+# Take a look at the worst performers of 2013:
+# You will notice: Almost all of them improve in 2014, moving back up toward the league average!
+arrange(two_years, `2013`)
+
+# Calculate the correlation between the two years (approx. 0.46)
+summarize(two_years, cor(`2013`, `2014`))
+
+
 # ================================================================
 # EXERCISES & PRACTICE
 # ================================================================
@@ -353,7 +429,7 @@ get_slope <- function(data) {
 
 dat %>% 
   group_by(HR) %>% 
-  summarize(get_slope(across()))
+  summarize(get_slope(dplyr::pick(everything())))
 
 # HR effect on runs per game by baseball league
 dat <- Teams %>% filter(yearID %in% 1961:2001) %>%
@@ -363,82 +439,72 @@ dat <- Teams %>% filter(yearID %in% 1961:2001) %>%
 # American League: +1.90 runs per HR | National League: +1.76 runs per HR
 dat %>% 
   group_by(lgID) %>% 
-  summarize(broom::tidy(lm(R ~ HR, data = across()), conf.int = TRUE)) %>% 
+  summarize(broom::tidy(lm(R ~ HR, data = dplyr::pick(everything())), conf.int = TRUE)) %>% 
   filter(term == "HR")
 
-# ==============================================================================
-# SECTION 2.3: REGRESSION FALLACY & THE SOPHOMORE SLUMP
-# ==============================================================================
+# MULTIVARIATE REGRESSION FOR A SPECIFIC YEAR (1971)
+# Task: Estimate the specific effects of BB and HR on runs scored (R) for the 1971 season only.
+teams_1971 <- Teams %>% 
+  filter(yearID == 1971)
 
-# THEORETICAL BACKGROUND:
-# The "Sophomore Slump" describes the phenomenon where "Rookies of the Year" (ROY) 
-# often perform worse in their second (sophomore) season.
-# This is not a psychological issue, but pure mathematics: 
-# "Regression to the Mean". Players who start extremely high are statistically 
-# bound to move back closer to the average in their next season.
+fit_1971 <- lm(R ~ BB + HR, data = teams_1971)
+# Display the estimates for BB and HR 
+broom::tidy(fit_1971)
 
-library(Lahman)
-library(tidyverse) # provides mutate, filter, group_by, spread, etc.
+#MULTI-YEAR REGRESSION TRENDS (1961 TO 2018)
+#Repeat the above exercise to find the effects of BB and HR on runs (R) 
+#for every year from 1961 to 2018 using do() and the broom package.
+#Make a scatterplot of the estimate for the effect of BB on runs over time 
+#and add a trend line with confidence intervals.
 
-# 1. Determine the primary position per player (the position with the most games played)
-playerInfo <- Fielding %>%
-  group_by(playerID) %>%
-  arrange(desc(G)) %>% # Sort games descending (highest number of games first)
-  slice(1) %>%         # Keep only the top row (primary position)
-  ungroup() %>%
-  left_join(People, by = "playerID") %>%
-  select(playerID, nameFirst, nameLast, POS)
+# APPROACH A: The Official Course Version (Using Absolute Season Totals)
 
-# 2. Isolate "Rookie of the Year" winners & attach all career batting statistics
-ROY <- AwardsPlayers %>%
-  filter(awardID == "Rookie of the Year") %>%
-  left_join(playerInfo, by = "playerID") %>%
-  rename(rookie_year = yearID) %>% # Save the award year as a fixed reference point
-  right_join(Batting, by = "playerID") %>% # Fetch complete career statistics
-  mutate(AVG = H/AB) %>%
-  filter(POS != "P") # Exclude pitchers to avoid skewing the batting statistics
+# Note: The edX platform uses absolute totals (R ~ BB + HR). Over the decades, 
+# the number of games per season increased and the league expanded, which 
+# inflates the absolute counts and causes the BB estimate to slightly increase.
+res_absolute <- Teams %>%
+  filter(yearID %in% 1961:2018) %>%
+  group_by(yearID) %>%
+  summarize(tidy(lm(R ~ BB + HR, data = dplyr::pick(everything())))) %>%
+  ungroup() 
 
-# 3. Keep only the rookie and sophomore seasons
-ROY <- ROY %>%
-  filter(yearID == rookie_year | yearID == rookie_year + 1) %>%
-  group_by(playerID) %>%
-  # Label the earlier year as "rookie" and the later year as "sophomore"
-  mutate(rookie = ifelse(yearID == min(yearID), "rookie", "sophomore")) %>%
-  filter(n() == 2) %>% # Keep only players who actually played both seasons
-  ungroup() %>%
-  select(playerID, rookie_year, rookie, nameFirst, nameLast, AVG)
-
-# 4. Reshape from long to wide format for mathematical comparison
-ROY_wide <- ROY %>% 
-  spread(rookie, AVG) %>% 
-  arrange(desc(rookie))
-
-# Calculation: What proportion of players performed worse in their sophomore year?
-# (Result: ~ 67.7% decline - a purely mathematical consequence!)
-mean(ROY_wide$sophomore - ROY_wide$rookie <= 0)
+# Plotting the absolute estimates shows a slight upward slope -> "increased over time"
+res_absolute %>%
+  filter(term == "BB") %>%
+  ggplot(aes(yearID, estimate)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(
+    title = "Absolute BB Coefficient Trend (Course Version: Increased Over Time)",
+    x = "Year",
+    y = "Absolute Estimate for BB"
+  )
 
 
-# ------------------------------------------------------------------------------
-# CROSS-CHECK: What happens to the WORST performers?
-# ------------------------------------------------------------------------------
-# If the theory holds true, extremely poor performers should improve the following year.
+# APPROACH B: The Statistically Robust Version (Using Per-Game Rates)
 
-# Filter all players active in both 2013 & 2014 (minimum 130 At Bats)
-two_years <- Batting %>%
-  filter(yearID %in% 2013:2014) %>%
-  group_by(playerID, yearID) %>%
-  filter(sum(AB) >= 130) %>%
-  summarize(AVG = sum(H)/sum(AB)) %>%
-  ungroup() %>%
-  spread(yearID, AVG) %>%
-  filter(!is.na(`2013`) & !is.na(`2014`)) %>%
-  left_join(playerInfo, by = "playerID") %>%
-  filter(POS != "P") %>%
-  select(-POS)
+# Note: To accurately compare seasons regardless of scheduled game changes 
+# or strike-shortened years (e.g., 1981, 1994), we must normalize variables 
+# to a "per game" baseline.
+res_rates <- Teams %>%
+  filter(yearID %in% 1961:2018) %>%
+  mutate(
+    R_per_game  = R / G,
+    BB_per_game = BB / G,
+    HR_per_game = HR / G
+  ) %>%
+  group_by(yearID) %>%
+  summarize(tidy(lm(R_per_game ~ BB_per_game + HR_per_game, data = dplyr::pick(everything())))) %>%
+  ungroup() 
 
-# Take a look at the worst performers of 2013:
-# You will notice: Almost all of them improve in 2014, moving back up toward the league average!
-arrange(two_years, `2013`)
-
-# Calculate the correlation between the two years (approx. 0.46)
-summarize(two_years, cor(`2013`, `2014`))
+# Plotting the rate-based estimates shows a flat trendline -> "remained the same"
+res_rates %>%
+  filter(term == "BB_per_game") %>%
+  ggplot(aes(yearID, estimate)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(
+    title = "Normalized BB Coefficient Trend (Rate Version: Remained the Same)",
+    x = "Year",
+    y = "Per-Game Estimate for BB"
+  )
