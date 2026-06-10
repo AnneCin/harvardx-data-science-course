@@ -27,3 +27,5 @@ statistical reasoning and machine learning.
 
 ## Stack
 R · tidyverse · ggplot2 · caret · R Markdown
+
+Focus: Bridging parametric design (Grasshopper/Dynamo) with R-based predictive analytics and sustainable generative design.
