@@ -45,4 +45,4 @@ cat("Durchschnittliche Effizienz:", mean(simulierte_effizienz), "%\n")
 cat("Standardfehler (Risiko):", sd(simulierte_effizienz), "\n")
 
 # --- 5. EXPORT FÜR GRASSHOPPER ---
-write_csv(design_daten, "07-linear-regression/rhino_facade_data.csv")
+write_csv(design_daten, "data/rhino_facade_data.csv")
