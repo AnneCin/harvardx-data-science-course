@@ -411,12 +411,18 @@ bat_joined %>%
   geom_point(alpha = 0.5) +
   geom_smooth(method = "lm")
 
+
+
+
 # Linear models: slope of singles and BB
 fit_singles <- lm(singles ~ mean_singles, data = bat_joined)
 coef(fit_singles)
 
 fit_bb <- lm(bb ~ mean_bb, data = bat_joined)
 coef(fit_bb)
+
+
+
 
 # Custom function to extract slope, SE and p-value per HR stratum
 get_slope <- function(data) {
@@ -442,6 +448,9 @@ dat %>%
   summarize(broom::tidy(lm(R ~ HR, data = dplyr::pick(everything())), conf.int = TRUE)) %>% 
   filter(term == "HR")
 
+
+
+
 # MULTIVARIATE REGRESSION FOR A SPECIFIC YEAR (1971)
 # Task: Estimate the specific effects of BB and HR on runs scored (R) for the 1971 season only.
 teams_1971 <- Teams %>% 
@@ -450,6 +459,9 @@ teams_1971 <- Teams %>%
 fit_1971 <- lm(R ~ BB + HR, data = teams_1971)
 # Display the estimates for BB and HR 
 broom::tidy(fit_1971)
+
+
+
 
 #MULTI-YEAR REGRESSION TRENDS (1961 TO 2018)
 #Repeat the above exercise to find the effects of BB and HR on runs (R) 
@@ -508,3 +520,161 @@ res_rates %>%
     x = "Year",
     y = "Per-Game Estimate for BB"
   )
+
+
+
+
+# LINEAR MODEL OF BB COEFFICIENTS OVER TIME
+
+# Step 1: Calculate the absolute effects of BB and HR on runs for each year
+res_absolute <- Teams %>%
+  filter(yearID %in% 1961:2018) %>%
+  group_by(yearID) %>%
+  summarize(tidy(lm(R ~ BB + HR, data = dplyr::pick(everything())))) %>%
+  ungroup() 
+
+# Step 2: Isolate the BB effect and fit a second linear model over time (yearID)
+# This determines how the estimated impact of BB on runs changes per additional year
+bb_trend_model <- res_absolute %>% 
+  filter(term == "BB") %>% 
+  lm(estimate ~ yearID, data = .)
+
+# Step 3: Extract the exact slope (estimate for yearID) and p-value
+broom::tidy(bb_trend_model)
+
+
+#Game attendance in baseball varies partly as a function of how well a team is playing.
+#The Teams data frame contains an attendance column. This is the total attendance for the season. 
+#To calculate average attendance, divide by the number of games played, as follows:
+
+# Prepare the data frame as specified in the assessment setup
+Teams_small <- Teams %>% 
+  filter(yearID %in% 1961:2001) %>% 
+  mutate(avg_attendance = attendance/G,
+         R_per_game = R/G,
+         HR_per_game = HR/G)
+
+# 1. Model: Predict average attendance based on runs per game
+fit_runs <- lm(avg_attendance ~ R_per_game, data = Teams_small)
+tidy(fit_runs)
+
+# 2. Model: Predict average attendance based on home runs per game
+fit_hr <- lm(avg_attendance ~ HR_per_game, data = Teams_small)
+tidy(fit_hr)
+tidy(fit_runs)
+
+#Use number of wins to predict average attendance; do not normalize for number of games.
+#For every game won in a season, how much does average attendance increase?
+#Suppose a team won zero games in a season.
+#Predict the average attendance.
+
+fit_wins <-lm(avg_attendance ~ W, data=Teams_small)
+tidy(fit_wins)
+
+#Use year to predict average attendance.
+#How much does average attendance increase each year?
+
+fit_year <- lm(avg_attendance ~ yearID, data=Teams_small)
+tidy(fit_year)
+
+#What is the correlation coefficient for runs per game and wins?
+Teams_small %>% summarize(cor(R/G, W))
+
+#What is the correlation coefficient for home runs per game and wins?
+Teams_small %>% summarize(cor(HR/G, W))
+
+#Stratify Teams_small by wins: divide number of wins by 10 and then round to the nearest integer. 
+#Filter to keep only strata 5 through 10. (The other strata have fewer than 20 data points, too few for our analyses).
+#Use the stratified dataset to answer this three-part question.
+
+
+strata_data <- Teams_small%>%
+  mutate(W_strata = round(W/10))%>%
+           filter(W_strata >=5 & W_strata<=10)
+
+#How many observations are in the 8 win strata?
+count_8_strata <- strata_data %>%
+  filter(W_strata == 8) %>%
+  nrow()
+
+print(count_8_strata)
+
+
+#Calculate the slope of the regression line predicting average attendance given runs per game for each of the win strata.
+slope_results <- strata_data %>%
+  group_by(W_strata) %>%
+  do(tidy(lm(avg_attendance ~ I(R/G), data = .))) %>%
+  filter(term == "I(R/G)") %>%
+  select(W_strata, estimate)
+
+print(slope_results)
+
+#Calculate the slope of the regression line predicting average attendance given HR per game for each of the win strata.
+## calculate slope of regression line after stratifying by HR per game
+
+slope_results <- strata_data %>%
+  group_by(W_strata) %>%
+  do(tidy(lm(avg_attendance ~ I(HR/G), data = .))) %>%
+  filter(term == "I(HR/G)") %>%
+  select(W_strata, estimate)
+
+print(slope_results)
+
+# Model: Attendance as a function of wins and home runs per game.
+multi_model <- lm(avg_attendance ~ W + I(HR/G), data = Teams_small)
+summary(multi_model)
+
+#Fit a multivariate regression determining the effects of runs per game, 
+#home runs per game, wins, and year on average attendance. 
+#Use the original Teams_small wins column, not the win strata from question 3.
+fit_Multi <- lm(avg_attendance ~ I(R/G) + I(HR/G) + W +yearID, data = Teams_small) 
+summary(fit_Multi)
+
+#Suppose a team averaged 5 runs per game, 1.2 home runs per game, and won 80 games in a season
+# Create a new data frame for the prediction
+# Note: Since the model uses R/G and HR/G, we ensure the input data 
+# matches the structure required by the model.
+new_team_2002 <- data.frame(
+  R = 5 * 162,      # 5 runs per game * 162 games
+  G = 162,          # Standard MLB season length
+  HR = 1.2 * 162,   # 1.2 home runs per game * 162 games
+  W = 80,           # 80 wins
+  yearID = 2002     # The year for prediction
+)
+
+new_team_1960 <- data.frame(
+  R = 5 * 162,      # 5 runs per game * 162 games
+  G = 162,          # Standard MLB season length
+  HR = 1.2 * 162,   # 1.2 home runs per game * 162 games
+  W = 80,           # 80 wins
+  yearID = 1960     # The year for prediction
+)
+
+# Use the predict() function to generate the average attendance
+# The model 'fit_Multi' uses the coefficients calculated previously
+prediction_2002 <- predict(fit_Multi, newdata = new_team_2002)
+prediction_1960 <- predict(fit_Multi, newdata = new_team_1960)
+
+# Display the result
+print(prediction_2002)
+print(prediction_1960)
+
+#predict average attendance for teams in 2002 in the original Teams data frame.
+#What is the correlation between the predicted attendance and actual attendance?
+
+
+# 1. Filter the original 'Teams' data for the year 2002
+teams_2002 <- Teams %>% 
+  filter(yearID == 2002) %>% 
+  mutate(avg_attendance = attendance / G)
+
+# 2. Use existing 'fit_Multi' model to predict attendance for 2002
+# Note: Ensure the variable names in teams_2002 match what the model expects
+teams_2002 <- teams_2002 %>% 
+  mutate(predicted_attendance = predict(fit_Multi, newdata = .))
+
+# 3. Calculate the correlation coefficient between actual and predicted
+correlation_result <- cor(teams_2002$avg_attendance, teams_2002$predicted_attendance)
+
+# Display the result
+print(correlation_result)
