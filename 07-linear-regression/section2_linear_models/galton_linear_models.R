@@ -241,3 +241,70 @@ pair_correlations %>% arrange(desc(correlation))
 
 # Print the table to the console
 print(pair_regressions)
+
+
+# ==============================================================================
+# ADDITIONAL EXPERIMENTS FROM VIDEOS (OUTLIERS & REVERSE CAUSALITY)
+# ==============================================================================
+
+# 1. OUTLIERS & SPEARMAN RANK CORRELATION --------------------------------------
+
+# Simulate independent X and Y (n = 100)
+set.seed(1985)
+x_sim <- rnorm(100, 100, 1)
+y_sim <- rnorm(100, 84, 1)
+
+# Standardize all except entry 23 to create a massive outlier
+x_sim[-23] <- scale(x_sim[-23])
+y_sim[-23] <- scale(y_sim[-23])
+
+# Create a tibble for plotting and evaluation
+df_sim_outliers <- tibble(x = x_sim, y = y_sim)
+
+# Print out comparisons of Pearson vs Spearman correlation
+cat("\n--- CORRELATION DEMONSTRATION WITH OUTLIERS ---\n")
+cat("Pearson (with outlier):   ", cor(x_sim, y_sim), "\n")
+cat("Pearson (without outlier):", cor(x_sim[-23], y_sim[-23]), "\n")
+cat("Spearman (with outlier):  ", cor(x_sim, y_sim, method = "spearman"), "\n\n")
+
+# Plot standard scatter plot with outlier
+ggplot(df_sim_outliers, aes(x_sim, y_sim)) +
+  geom_point(alpha = 0.5, color = "darkred") +
+  theme_minimal() +
+  labs(title = "Pearson Correlation: Vulnerable to Outliers",
+       subtitle = "Entry 23 acts as a high leverage point",
+       x = "X (Standardized)", y = "Y (Standardized)")
+
+# Plot rank-based scatter plot (Spearman principle)
+ggplot(df_sim_outliers, aes(rank(x_sim), rank(y_sim))) +
+  geom_point(alpha = 0.5, color = "steelblue") +
+  theme_minimal() +
+  labs(title = "Spearman Rank Correlation: Robust to Outliers",
+       subtitle = "Ranks compress the leverage of extreme values",
+       x = "Rank of X", y = "Rank of Y")
+
+
+# 2. REVERSING CAUSE AND EFFECT (REVERSE CAUSALITY) ----------------------------
+
+# Re-prepare Galton heights for testing
+set.seed(1983)
+galton_reversed_test <- GaltonFamilies %>%
+  filter(gender == "male") %>%
+  group_by(family) %>%
+  sample_n(1) %>%
+  ungroup() %>%
+  select(father, childHeight) %>%
+  rename(son = childHeight)
+
+# Biologically correct interpretation: Father's height predicts Son's height
+correct_fit <- lm(son ~ father, data = galton_reversed_test)
+cat("--- BIOLOGICALLY CORRECT DIRECTION (son ~ father) ---\n")
+print(tidy(correct_fit))
+
+# Reversely formulated model: Son's height predicts Father's height
+reversed_fit <- lm(father ~ son, data = galton_reversed_test)
+cat("\n--- REVERSED CAUSALITY DIRECTION (father ~ son) ---\n")
+print(tidy(reversed_fit))
+
+# Notice that both models yield exact same highly significant p-values.
+# Only our logical understanding tells us which direction is correct.
