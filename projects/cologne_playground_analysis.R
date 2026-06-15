@@ -122,3 +122,52 @@ ggplot(koeln_spielplaetze_clean, aes(x = an_verkehrsarmer_strasse, y = equipment
        x = "Quiet Street",
        y = "Equipment Score (0-3)") +
   theme_minimal()
+
+
+#--- 2. ADVANCED SCORING ---
+
+# 1. Schau dir die ersten 20 Einträge der Spalte an
+head(koeln_spielplaetze_clean$besonderheiten, 20)
+
+# 2. Zähle, wie oft "Sand" vorkommt
+#sum(grepl("Sand", koeln_spielplaetze_clean$besonderheiten, ignore.case = TRUE), na.rm = TRUE)
+
+# --- BEREINIGTE ANALYSE-LOGIK ---
+
+koeln_spielplaetze_clean <- koeln_spielplaetze_clean %>%
+  mutate(
+    # Score 1: Kleinkind-Fokus (Alles, was explizit als Spielplatz gelabelt ist)
+    suitability_toddler = ifelse(typ == "Spielplatz", 1, 0),
+    
+    # Score 2: Teenager-Fokus (Alles mit Bolzplatz oder Sportanlage)
+    suitability_teen = ifelse(typ %in% c("Bolzplatz", "Sportanlage", "Spiel- und Sportangebot"), 1, 0)
+  )
+
+# Kurze Kontrolle, ob die Verteilung Sinn ergibt
+#table(koeln_spielplaetze_clean$suitability_toddler, koeln_spielplaetze_clean$typ)
+
+# 3. Zähle, wie oft "Rutsche" vorkommt
+#sum(grepl("Rutsche", koeln_spielplaetze_clean$besonderheiten, ignore.case = TRUE), na.rm = TRUE)
+
+# 4. Schau dir an, was in den restlichen 90% steht, die vielleicht NICHT "Sand" enthalten
+# Das zeigt dir, welche Wörter stattdessen dort vorkommen
+#table(koeln_spielplaetze_clean$besonderheiten)
+
+# Suche nach 'Sand' in den Besonderheiten
+#koeln_spielplaetze_clean <- koeln_spielplaetze_clean %>%
+  #mutate(
+    #sandkasten_vorhanden = ifelse(grepl("Sand", besonderheiten, ignore.case = TRUE), 1, 0),
+    # Jetzt kombinieren wir das für den Kleinkind-Score
+   # suitability_toddler = ifelse(sandkasten_vorhanden == 1, 1, 0)
+ # )
+
+#koeln_spielplaetze_clean <- koeln_spielplaetze_clean %>%
+  #mutate(
+    # Kleinkind-Eignung durch Text-Suche in 'besonderheiten'
+    #suitability_toddler = ifelse(grepl("Sand|Rutsche", besonderheiten, ignore.case = TRUE), 1, 0),
+    
+    # Teenager-Eignung durch deine bereits existierenden Spalten
+    #suitability_teen = ifelse(fussball == 1 | basketball == 1, 1, 0)
+    
+    #table(koeln_spielplaetze_clean$typ)
+  #)
