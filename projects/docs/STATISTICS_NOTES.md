@@ -1,17 +1,33 @@
-# Statistical Notes for Data Projects
+Statistical Notes for Data Projects
 
-This document serves as a brief overview of the methodological standards applied in this repository to ensure high-quality, reproducible analysis.
+This document outlines the methodological standards applied in this repository to ensure high-quality, reproducible data analysis.
 
-## Core Principles
+Core Principles
 
-- **Correlation vs. Causation**: 
-  Correlation indicates an association, not a causal relationship. As highlighted in, we must be cautious not to over-interpret associations between variables, as many factors can lead to correlation without causation.
+1. Correlation vs. Causation
 
-- **Statistical Integrity & P-Hacking**: 
-  I am committed to avoiding "data dredging" (also known as p-hacking or data snooping). We avoid reporting only significant results or fitting multiple models to artificially lower p-values. 
+Correlation indicates a statistical association between variables, not a causal relationship. We must be cautious not to over-interpret associations, as many factors can lead to high correlation without any underlying causation (e.g., spurious correlations).
 
-- **Methodological Approach**: 
-  My goal is to rely on theoretical hypotheses and robust data pipelines rather than seeking spurious correlations. When analyzing architectural datasets, interpretations are grounded in planning logic rather than accidental statistical findings.
+2. Statistical Integrity & P-Hacking
 
----
-*Reference: Based on the HarvardX Data Science Course, "Correlation is not Causation" section.*
+We are committed to avoiding "data dredging" (also known as p-hacking or data snooping). This means:
+
+We do not search through the dataset repeatedly until we find a random, statistically significant result.
+
+We do not fit multiple models post-hoc just to artificially force a p-value below $0.05$.
+
+All analyses are grounded in logical, domain-specific hypotheses (e.g., urban planning principles).
+
+3. The Influence of Outliers
+
+A single extreme data point (caused by typos, sensor errors, or rare extreme events) can artificially inflate correlation coefficients or mask a true underlying relationship.
+
+Action: We visually inspect the data for outliers before drawing conclusions.
+
+Solution: When strong outliers are suspected, we utilize robust statistical measures such as the Spearman rank correlation instead of the classic Pearson correlation.
+
+Zusammenfassung (German Summary)
+
+Diese Richtlinien dienen als methodisches Fundament für alle datengestützten Analysen in diesem Repository. Durch den bewussten Verzicht auf "Data Dredging" (P-Hacking) und die Berücksichtigung von Ausreißern – beispielsweise durch den systematischen Einsatz der robusten Spearman-Rangkorrelation anstelle der klassischen Pearson-Korrelation bei unregelmäßigen Datenstrukturen – stellen wir sicher, dass gefundene Zusammenhänge wissenschaftlichen Standards entsprechen und keine reinen Zufallsprodukte (Scheinkorrelationen) darstellen.
+
+Reference: Based on the HarvardX Data Science Course sections on "Correlation is not Causation" and "Outliers".
